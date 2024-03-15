@@ -1,3 +1,5 @@
+# This script creates Windows Firewall rules to block common BitTorrent applications and ports.
+# The script creates rules to block the following BitTorrent applications:
 $torrentApps = @(
     "uTorrent",
     "BitTorrent",
@@ -16,7 +18,7 @@ $torrentApps = @(
     "PicoTorrent",
     "WebTorrent"
 )
-
+# The script creates rules to block the following common paths:
 $commonPaths = @(
     [Environment]::GetFolderPath("Desktop"),
     [Environment]::GetFolderPath("Downloads"),
@@ -33,20 +35,31 @@ $commonPaths = @(
     "C:\Users\*\AppData\Local"
 )
 
+# Create firewall rules to block the BitTorrent applications
 foreach ($app in $torrentApps) {
+    # Create a regular expression pattern to match app names with variations
+    $pattern = re.compile(r"^(.*?)" + $app + r"\b", re.IGNORECASE)  
+
     foreach ($path in $commonPaths) {
         $ruleName = "Block" + $app + "_" + $path.Replace(":", "").Replace("\", "")
-        $execName = $app + ".exe"
-        $fullPath = Join-Path -Path $path -ChildPath $execName
 
-        # Check if the rule already exists
-        $existingRule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
-        if ($null -eq $existingRule) {
-            # Create a new rule to block the application
-            New-NetFirewallRule -DisplayName $ruleName -Direction Outbound -Program $fullPath -Action Block
-            Write-Host "Created firewall rule to block $app in $path"
-        } else {
-            Write-Host "Firewall rule to block $app in $path already exists."
+        # Enumerate potential executable names based on the pattern
+        $potentialExes = Get-ChildItem -Path $path -Filter "*$($app)*.exe" -ErrorAction SilentlyContinue 
+
+        foreach ($exe in $potentialExes) {
+            $fullPath = $exe.FullName
+
+            if ($pattern.match($exe.Name)) {
+                # Check if the rule already exists
+                $existingRule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
+                if ($null -eq $existingRule) {
+                    # Create a new rule to block the application
+                    New-NetFirewallRule -DisplayName $ruleName -Direction Outbound -Program $fullPath -Action Block
+                    Write-Host "Created firewall rule to block $exe.Name in $path"
+                } else {
+                    Write-Host "Firewall rule to block $exe.Name in $path already exists."
+                }
+            }
         }
     }
 }
