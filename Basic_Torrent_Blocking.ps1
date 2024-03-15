@@ -24,10 +24,11 @@ $torrentApps = @(
 # System-level directories to check
 $systemDirectories = @(
     "C:\",
+    "C:\Temp\",
+    "C:\Windows",
     "C:\Program Files",
     "C:\Program Files (x86)",
-    "C:\ProgramData",
-    "C:\Temp\"
+    "C:\ProgramData"
 )
 
 foreach ($profile in $userProfiles) {
@@ -44,7 +45,7 @@ foreach ($profile in $userProfiles) {
     foreach ($app in $torrentApps) {
         foreach ($dir in $directories) {
             if (Test-Path $dir) {
-                $ruleName = "Block_" + $app + "_" +($dir -replace '\\', '_').Replace(':', '')
+                $ruleName = "Block_" + $app + "_" + ($dir -replace '\\', '_').Replace(':', '')
                 $execName = $app + ".exe"
                 $fullPath = Join-Path -Path $dir -ChildPath $execName
 
@@ -59,5 +60,21 @@ foreach ($profile in $userProfiles) {
                 }
             }
         }
+    }
+}
+
+# Block common torrent ports
+$torrentPorts = 6881..6889
+foreach ($port in $torrentPorts) {
+    $ruleName = "Block_Torrent_Port_$port"
+    # Check if the rule already exists
+    $existingRule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
+    if ($null -eq $existingRule) {
+        # Create a new rule to block the port
+        New-NetFirewallRule -DisplayName $ruleName -Direction Outbound -LocalPort $port -Protocol TCP -Action Block
+        New-NetFirewallRule -DisplayName $ruleName -Direction Outbound -LocalPort $port -Protocol UDP -Action Block
+        Write-Host "Created firewall rule to block port $port"
+    } else {
+        Write-Host "Firewall rule to block port $port already exists."
     }
 }
