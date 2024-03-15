@@ -1,5 +1,7 @@
-# This script creates Windows Firewall rules to block common BitTorrent applications and ports.
-# The script creates rules to block the following BitTorrent applications:
+# Retrieve all user profiles
+$userProfiles = Get-CimInstance -ClassName Win32_UserProfile
+
+# Define the list of torrent applications
 $torrentApps = @(
     "uTorrent",
     "BitTorrent",
@@ -18,62 +20,44 @@ $torrentApps = @(
     "PicoTorrent",
     "WebTorrent"
 )
-# The script creates rules to block the following common paths:
-$commonPaths = @(
-    [Environment]::GetFolderPath("Desktop"),
-    [Environment]::GetFolderPath("Downloads"),
-    [Environment]::GetFolderPath("MyDocuments"),
-    [Environment]::GetFolderPath("ProgramFiles"),
-    [Environment]::GetFolderPath("ProgramFilesX86"),
-    [Environment]::GetFolderPath("ProgramFilesCommon"),
-    [Environment]::GetFolderPath("ProgramFilesX86Common"),
-    [Environment]::GetFolderPath("UserProfile"),
-    [Environment]::GetFolderPath("Windows"),
+
+# System-level directories to check
+$systemDirectories = @(
     "C:\",
+    "C:\Program Files",
+    "C:\Program Files (x86)",
     "C:\ProgramData",
-    "C:\Users\*\AppData\Roaming",
-    "C:\Users\*\AppData\Local"
+    "C:\Temp\"
 )
 
-# Create firewall rules to block the BitTorrent applications
-foreach ($app in $torrentApps) {
-    # Create a regular expression pattern to match app names with variations
-    $pattern = re.compile(r"^(.*?)" + $app + r"\b", re.IGNORECASE)  
+foreach ($profile in $userProfiles) {
+    # Define the directories to check within each user profile
+    $desktopPath = Join-Path -Path $profile.LocalPath -ChildPath "Desktop"
+    $downloadsPath = Join-Path -Path $profile.LocalPath -ChildPath "Downloads"
+    $documentsPath = Join-Path -Path $profile.LocalPath -ChildPath "Documents"
+    $musicPath = Join-Path -Path $profile.LocalPath -ChildPath "My Music"
+    $videosPath = Join-Path -Path $profile.LocalPath -ChildPath "My Videos"
 
-    foreach ($path in $commonPaths) {
-        $ruleName = "Block" + $app + "_" + $path.Replace(":", "").Replace("\", "")
+    # Combine user-specific directories with system-level directories
+    $directories = @($desktopPath, $downloadsPath, $documentsPath, $musicPath, $videosPath) + $systemDirectories
 
-        # Enumerate potential executable names based on the pattern
-        $potentialExes = Get-ChildItem -Path $path -Filter "*$($app)*.exe" -ErrorAction SilentlyContinue 
+    foreach ($app in $torrentApps) {
+        foreach ($dir in $directories) {
+            if (Test-Path $dir) {
+                $ruleName = "Block_" + $app + "_" +($dir -replace '\\', '_').Replace(':', '')
+                $execName = $app + ".exe"
+                $fullPath = Join-Path -Path $dir -ChildPath $execName
 
-        foreach ($exe in $potentialExes) {
-            $fullPath = $exe.FullName
-
-            if ($pattern.match($exe.Name)) {
                 # Check if the rule already exists
                 $existingRule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
                 if ($null -eq $existingRule) {
                     # Create a new rule to block the application
                     New-NetFirewallRule -DisplayName $ruleName -Direction Outbound -Program $fullPath -Action Block
-                    Write-Host "Created firewall rule to block $exe.Name in $path"
+                    Write-Host "Created firewall rule to block $app in $dir"
                 } else {
-                    Write-Host "Firewall rule to block $exe.Name in $path already exists."
+                    Write-Host "Firewall rule to block $app in $dir already exists."
                 }
             }
         }
-    }
-}
-
-# Blocking common BitTorrent ports
-$commonPorts = 6881..6889
-foreach ($port in $commonPorts) {
-    $ruleName = "Block_BitTorrent_Port_$port"
-    $existingRule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
-    if ($null -eq $existingRule) {
-        New-NetFirewallRule -DisplayName $ruleName -Direction Outbound -Protocol TCP -LocalPort $port -Action Block
-        New-NetFirewallRule -DisplayName $ruleName -Direction Outbound -Protocol UDP -LocalPort $port -Action Block
-        Write-Host "Created firewall rule to block TCP and UDP port $port"
-    } else {
-        Write-Host "Firewall rule to block TCP and UDP port $port already exists."
     }
 }
