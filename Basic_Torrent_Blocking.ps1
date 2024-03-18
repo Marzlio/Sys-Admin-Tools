@@ -1,3 +1,16 @@
+# Check if the script is running as an administrator
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Warning "You need to run this script as an Administrator. Please restart the script with administrative rights."
+    Pause
+    exit
+}
+
+# Check if the firewall is disabled
+if ((Get-NetFirewallProfile -Profile Domain,Private,Public | Where-Object {$_.Enabled -eq $false}).Count -gt 0) {
+    Write-Warning "The firewall is disabled on one or more profiles. Please enable the firewall for better security."
+    Pause
+}
+
 # Retrieve all user profiles
 $userProfiles = Get-CimInstance -ClassName Win32_UserProfile
 
