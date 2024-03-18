@@ -1,3 +1,12 @@
+
+# Save the current execution policy
+$currentPolicy = Get-ExecutionPolicy
+Write-Warning "The execution policy is currently set to $currentPolicy. It will be temporarily set to Unrestricted for this script to run."
+
+# Temporarily set the execution policy to Unrestricted
+Set-ExecutionPolicy Unrestricted -Force
+Write-Warning "The execution policy has been temporarily set to Unrestricted."
+
 # Check if the script is running as an administrator
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
     Write-Warning "You need to run this script as an Administrator. Please restart the script with administrative rights."
@@ -108,3 +117,6 @@ foreach ($port in $torrentPorts) {
         Write-Host "Firewall rule to block port $port already exists."
     }
 }
+
+# At the end of your script, revert the execution policy to its original state
+Set-ExecutionPolicy $currentPolicy -Force
