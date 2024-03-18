@@ -28,7 +28,24 @@ $systemDirectories = @(
     "C:\Windows",
     "C:\Program Files",
     "C:\Program Files (x86)",
-    "C:\ProgramData"
+    "C:\ProgramData",
+    "C:\Users\Public",
+    "C:\Users\Default",
+    "C:\Users\Default User",
+    "C:\Users\All Users",
+    "C:\Users\DefaultAppPool",
+    "C:\Users\LocalService",
+    "C:\Users\NetworkService",
+    "C:\Windows\System32",
+    "C:\Windows\SysWOW64",
+    "C:\Windows\Temp",
+    "C:\Windows\Installer",
+    "C:\Windows\Fonts",
+    "C:\Windows\Help",
+    "C:\Windows\Inf",
+    "C:\Windows\IME",
+    "C:\Windows\Logs",
+    "C:\Windows\Tasks"
 )
 
 foreach ($profile in $userProfiles) {
