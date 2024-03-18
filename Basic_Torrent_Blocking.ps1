@@ -1,27 +1,40 @@
 
+# Define the log file path
+$logPath = "output.log"
+
 # Save the current execution policy
 $currentPolicy = Get-ExecutionPolicy
-Write-Warning "The execution policy is currently set to $currentPolicy. It will be temporarily set to Unrestricted for this script to run."
+$execution_warning = "The execution policy is currently set to $currentPolicy. It will be temporarily set to Unrestricted for this script to run."
+Write-Warning $execution_warning
+$execution_warning | Out-File -FilePath $logPath -Append
 
 # Temporarily set the execution policy to Unrestricted
 Set-ExecutionPolicy Unrestricted -Force
-Write-Warning "The execution policy has been temporarily set to Unrestricted."
+$unrestricted_warning =  "The execution policy has been temporarily set to Unrestricted."
+Write-Warning $unrestricted_warning
+$unrestricted_warning | Out-File -FilePath $logPath -Append
 
 # Check if the script is running as an administrator
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Warning "You need to run this script as an Administrator. Please restart the script with administrative rights."
+    $administrator_warning = "You need to run this script as an Administrator. Please restart the script with administrative rights."
+    Write-Warning $administrator_warning
+    $administrator_warning | Out-File -FilePath $logPath -Append
     Pause
     exit
 }
 
 # Check if the firewall is disabled
 if ((Get-NetFirewallProfile -Profile Domain,Private,Public | Where-Object {$_.Enabled -eq $false}).Count -gt 0) {
-    Write-Warning "The firewall is disabled on one or more profiles. Please enable the firewall for better security."
+    $firewall_warning = "The firewall is disabled on one or more profiles. Please enable the firewall for better security."
+    Write-Warning $firewall_warning
+    $firewall_warning | Out-File -FilePath $logPath -Append
     Pause
 }
 
 # Retrieve all user profiles
 $userProfiles = Get-CimInstance -ClassName Win32_UserProfile
+$userProfiles | Out-File -FilePath $logPath -Append
+
 
 # Define the list of torrent applications
 $torrentApps = @(
@@ -93,7 +106,9 @@ foreach ($profile in $userProfiles) {
                 if ($null -eq $existingRule) {
                     # Create a new rule to block the application
                     New-NetFirewallRule -DisplayName $ruleName -Direction Outbound -Program $fullPath -Action Block
-                    Write-Host "Created firewall rule to block $app in $dir"
+                     $create_rules = "Created firewall rule to block $app in $dir"
+                     Write-Host $create_rules
+                     Write-host $create_rules | Out-File -FilePath $logPath -Append
                 } else {
                     Write-Host "Firewall rule to block $app in $dir already exists."
                 }
@@ -113,6 +128,7 @@ foreach ($port in $torrentPorts) {
         New-NetFirewallRule -DisplayName $ruleName -Direction Outbound -LocalPort $port -Protocol TCP -Action Block
         New-NetFirewallRule -DisplayName $ruleName -Direction Outbound -LocalPort $port -Protocol UDP -Action Block
         Write-Host "Created firewall rule to block port $port"
+        Write-Host "Created firewall rule to block port $port" | Out-File -FilePath $logPath -Append
     } else {
         Write-Host "Firewall rule to block port $port already exists."
     }
@@ -120,3 +136,5 @@ foreach ($port in $torrentPorts) {
 
 # At the end of your script, revert the execution policy to its original state
 Set-ExecutionPolicy $currentPolicy -Force
+write-host "The execution policy has been reverted to its original state."
+write-host "The execution policy has been reverted to its original state." | Out-File -FilePath $logPath -Append
